@@ -1,4 +1,5 @@
-import { Writable, writable } from "svelte/store";
+import {  writable } from "svelte/store";
+import type {Writable} from "svelte/store";
 import { createGame, findGame } from "./games.api";
 import gamesSocket from "./games.socket";
 import { Roles } from "./games.types";

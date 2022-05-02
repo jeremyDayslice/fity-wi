@@ -11,7 +11,9 @@
 
 <script lang="ts">
 	import { findGame } from '$lib/games/games.api';
-	import games from '$lib/games/games.store';
+	import gamesSocket from '$lib/games/games.socket';
+	import { roleStore } from '$lib/games/games.store';
+	import { Roles } from '$lib/games/games.types';
 
 	import { io, Socket } from 'socket.io-client';
 	const socket: Socket = io('http://localhost:3001', { transports: ['websocket'] });
@@ -34,9 +36,8 @@
 		debugger;
 	});
 
-	if ($games.code && $games.code == game.code) {
-		socket.emit('joinAsHost', { name: checker, code: game.code });
-
+	if ($roleStore && $roleStore == Roles.HOST) {
+		console.log('I am host');
 		socket.on('host-updated', (game) => {
 			console.log('host update ', game);
 			game = game;
@@ -87,7 +88,7 @@
 
 <input bind:value={checker} />
 <button on:click={handleJoin} type="button"> Join as a Checker </button>
-{#if $games.code == game.code}
+{#if $roleStore == Roles.HOST}
 	<button class="p-6 bg-blue-500 text-white" on:click={handleStart} type="button"> Start </button>
 {/if}
 
