@@ -12,11 +12,11 @@
 <script lang="ts">
 	import { findGame } from '$lib/games/games.api';
 	import gamesSocket from '$lib/games/games.socket';
-	import { roleStore } from '$lib/games/games.store';
+	import { codeStore, roleStore } from '$lib/games/games.store';
 	import { Roles } from '$lib/games/games.types';
+	import questionsSocket from '$lib/questions/questions.socket';
+	import questionsStore from '$lib/questions/questions.store';
 
-	import { io, Socket } from 'socket.io-client';
-	const socket: Socket = io('http://localhost:3001', { transports: ['websocket'] });
 	export let game: { code: string; player: string };
 	let checker: string = '';
 	let question = {
@@ -26,40 +26,21 @@
 	let answer: number = -1;
 	let guess: number = -1;
 
-	socket.on('updated', (game) => {
-		console.log('server update ', game);
-		game = game;
-	});
-
-	socket.on('newQuestion', (q) => {
-		question = q;
-		debugger;
-	});
-
 	if ($roleStore && $roleStore == Roles.HOST) {
 		console.log('I am host');
-		socket.on('host-updated', (game) => {
-			console.log('host update ', game);
-			game = game;
-		});
-
-		socket.on('newAnswer', (a) => (answer = a));
+		questionsSocket.question.listenForGuessResult($codeStore);
 	}
-	socket.on('guess-made', (answer: number, guess: number) => {
-		answer = answer;
-		guess = guess;
-		console.log('Got it ', answer, guess);
-	});
+	questionsSocket.question.listenForGuess($codeStore);
 
 	const handleJoin = () => {
-		socket.emit('joinAsChecker', { name: checker, code: game.code });
+		gamesSocket.join.joinAsChecker(checker, game.code);
 	};
 	const handleStart = () => {
-		socket.emit('nextQuestion', { code: game.code });
+		questionsSocket.question.newQuestion(game.code);
 	};
 
 	const makeGuess = (idx: number) => {
-		socket.emit('guess', { code: game.code, guess: idx });
+		questionsSocket.question.makeGuess(game.code, question.choices[idx]);
 	};
 </script>
 
@@ -67,27 +48,30 @@
 	<div class="text-gray-400 text-sm text-right">
 		{game.code}
 	</div>
-	<div class="bg-white rounded-lg p-10">
-		<span class="text-xl font-semibold">
-			{question.question}
-		</span>
-		<div class="flex">
-			{#each question.choices as choice, i}
-				<button
-					type="button"
-					class:answer={i == answer}
-					on:click={() => makeGuess(i)}
-					class="w-1/2 border-2 border-purple-500">{choice}</button
-				>
-			{/each}
+	{#if $questionsStore}
+		<div class="bg-white rounded-lg p-10">
+			<span class="text-xl font-semibold">
+				{$questionsStore.question}
+			</span>
+			<div class="flex">
+				{#each $questionsStore.choices as choice, i}
+					<button
+						type="button"
+						class:answer={i == answer}
+						on:click={() => makeGuess(i)}
+						class="w-1/2 border-2 border-purple-500">{choice}</button
+					>
+				{/each}
+			</div>
 		</div>
-	</div>
+	{/if}
 </div>
 
 <h2>Currently in the hot seat is {game.player}</h2>
 
 <input bind:value={checker} />
 <button on:click={handleJoin} type="button"> Join as a Checker </button>
+<button class="p-6 bg-blue-500 text-white" on:click={handleStart} type="button"> Start </button>
 {#if $roleStore == Roles.HOST}
 	<button class="p-6 bg-blue-500 text-white" on:click={handleStart} type="button"> Start </button>
 {/if}

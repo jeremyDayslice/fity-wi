@@ -1,5 +1,4 @@
-import { io, Socket } from 'socket.io-client';
-const socket: Socket = io('http://localhost:3001', { transports: ['websocket'] });
+import { socket } from "$lib/socket.service";
 
 const joinAsHost = (name: string, code: string) => {
     socket.emit('joinAsHost', { name, code });
@@ -12,7 +11,6 @@ const joinAsGuesser = (name: string, code: string) => {
 }
 
 export default {
-    socket: socket,
     join: {
           joinAsHost,  
           joinAsChecker,
