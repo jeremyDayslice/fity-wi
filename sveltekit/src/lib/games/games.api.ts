@@ -10,11 +10,12 @@ function findGame(code: string): Promise<Game> {
 	}).then((r) => r.json());
 }
 
-function createGame(name: string): Promise<Game> {
+function createGame(id: string, name: string): Promise<Game> {
 	return fetch(`http://localhost:3001/games`, {
 		method: 'POST',
         body: JSON.stringify({
-            name: name
+			id,
+            name
             }),
 		cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
 		headers: {

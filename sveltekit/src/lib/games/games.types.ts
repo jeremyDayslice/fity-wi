@@ -6,4 +6,10 @@ export enum Roles {
 
 export type Game = {
     code: string;
+    players: any;
+}
+
+export type Player = {
+    id: string,
+    name: string
 }

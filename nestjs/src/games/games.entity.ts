@@ -1,13 +1,12 @@
+import { Players, Progress, Question, Result } from "./games.types";
+
 export interface GamesEntity {
   code: string;
-  player: any;
-  checkers: any[];
-  progress: number;
+  progress: Progress;
+  players?: Players;
   current?: {
-    question: string;
-    choices: string[];
-    answer: number;
-    votes: boolean[];
-  },
-  
+    question: Question;
+    answer: string;
+    result: Result;
+  }
 }

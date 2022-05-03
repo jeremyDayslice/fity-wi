@@ -7,6 +7,4 @@ export enum Roles {
 export type Question = {
     question: string;
     choices: string[];
-    guess?: string;
-    answer?: string;
 }

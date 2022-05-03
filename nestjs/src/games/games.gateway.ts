@@ -7,6 +7,7 @@ import { MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer, OnGat
 import { Socket, Server } from 'socket.io';
 import { GamesEntity } from './games.entity';
 import { GamesService } from './games.service';
+import { Role } from './games.types';
 @WebSocketGateway({ transports: ['websocket'] })
 export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
 
@@ -16,26 +17,41 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
     server: Server;
 
     @SubscribeMessage('joinAsHost')
-    async joinAsHost(client: Socket, data: {name: string, code: string}) {
-        client.join(data.code);
-        client.join(`${data.code}-host`);
+    async joinAsHost(client: Socket, data: {id: string, code: string}) {
         const game: GamesEntity = await this.service.getGame(data.code);
-        this.server.to(data.code).emit('updated', game);
+        if(game.players[data.id] && game.players[data.id].role == Role.HOST) {
+            client.join(data.code);
+            client.join(`${data.code}-host`);
+            client.leave(`${data.code}-guesser`);
+            this.server.to(data.code).emit('updated', game);
+            console.log(`${data.id} has joined as Host of ${data.code}`);
+        }
     }
 
     @SubscribeMessage('joinAsChecker')
-    async joinAsChecker(client: Socket, data: {name: string, code: string}) {
-        const game: GamesEntity = await this.service.addChecker(data.name, data.code);
+    async joinAsChecker(client: Socket, data: {id: string, name: string, code: string}) {
+        const game: GamesEntity = await this.service.addChecker(data.id, data.name, data.code);
         client.join(data.code);
+        client.leave(`${data.code}-guesser`);
+        client.leave(`${data.code}-host`);
         this.server.to(data.code).emit('updated', game);
         this.server.to(`${data.code}-host`).emit('host-updated', game);
+    }
+    
+    @SubscribeMessage('joinAsGuesser')
+    async joinAsGuesser(client: Socket, data: {id: string, name: string, code: string}) {
+        const game: GamesEntity = await this.service.addGuesser(data.id, data.name, data.code);
+        client.join(data.code);
+        client.join(`${data.code}-guesser`);
+        client.leave(`${data.code}-host`);
+        this.server.to(data.code).emit('updated', game);
     }
 
     @SubscribeMessage('nextQuestion')
     async getNextQuestion(client: Socket, data:{code: string}) {
         let game: GamesEntity = await this.service.getGame(data.code); 
         game = await this.service.nextQuestion(game);
-        this.server.to(data.code).emit('newQuestion', { question: game.current.question, choices: game.current.choices });
+        this.server.to(data.code).emit('newQuestion', { question: game.current.question.label, choices: game.current.question.choices });
         
         this.server.to(`${data.code}-host`).emit('newAnswer', { answer: game.current.answer })
     }
@@ -43,8 +59,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
     @SubscribeMessage('makeGuess')
     async checkGuess(client: Socket, data:{code: string, guess: string}) {
         const game: GamesEntity = await this.service.getGame(data.code); 
-        this.server.to(data.code).emit('guessMade');
+        debugger;
+        this.server.to(data.code).emit('guessMade', data.guess);
         this.server.to(`${data.code}-guesser`).emit('guessResult', { answer: game.current.answer, guess: data.guess });
+        this.server.to(`${data.code}-host`).emit('guessResult', { answer: game.current.answer, guess: data.guess });
     }
 
     handleConnection(client: any, ...args: any[]) {
